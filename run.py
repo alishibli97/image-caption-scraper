@@ -1,0 +1,349 @@
+import argparse
+import requests
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from loguru import logger
+import time
+from datetime import datetime
+import re
+import json
+import os
+from pathlib import Path
+import io
+from PIL import Image
+from helper import *
+
+from nltk.corpus import wordnet
+
+
+class config():
+    def __init__(self,args):
+        self.engine = args.engine
+        self.num_images = args.num_images
+        self.query = args.query
+        self.out_dir = args.out_dir
+        self.headless = args.headless
+        self.driver = args.driver
+
+class Image_Caption_Scraper():
+
+    def __init__(self, cfg):
+        """Initialization is only starting the web driver and getting the public IP address"""
+        logger.info("Initializing scraper")
+        self.cfg = cfg
+        self.public_ip = self.get_public_ip_address()
+        self.start_web_driver()
+
+    def get_public_ip_address(self):
+        """Read the public IP address of the host"""
+        content = requests.get('https://www.whatismyip.org/my-ip-address').content
+        soup = BeautifulSoup(content,'html.parser')
+        public_ip = soup.find("a",{"href":"/my-ip-address"}).string
+        return public_ip
+
+    def start_web_driver(self):
+        """Create the webdriver and point it to the specific search engine"""
+        logger.info("Starting the engine")
+        chrome_options = Options()
+        chrome_options.headless = cfg.headless
+        self.wd = webdriver.Chrome(options=chrome_options,executable_path=self.cfg.driver)
+
+    def scrape(self):
+        """Main function to scrape"""
+        self.set_target_url()
+        if self.cfg.engine=='google': img_data = self.get_google_images()
+        elif self.cfg.engine=='yahoo': img_data = self.get_yahoo_images()
+        elif self.cfg.engine=='flickr': img_data = self.get_flickr_images()
+        else: return
+        return img_data
+
+    def set_target_url(self):
+        """Given the target engine and query, build the target url"""
+        url_index = {
+            'google': "https://www.google.com/search?safe=off&site=&tbm=isch&source=hp&q={}&oq={}&gs_l=img".format(self.cfg.query,self.cfg.query),
+            'yahoo': "https://images.search.yahoo.com/search/images;?&p={}&ei=UTF-8&iscqry=&fr=sfp".format(self.cfg.query),
+            'flickr': "https://www.flickr.com/search/?text={}".format(self.cfg.query)
+        }
+        if not self.cfg.engine in url_index: 
+            logger.debug(f"Please choose {' or '.join(k for k in url_index)}.")
+            return
+        self.target_url = url_index[self.cfg.engine]
+
+    def scroll_to_end(self):
+        """Function for Google Images to scroll to new images after finishing all existing images"""
+        logger.info("Loading new images")
+        self.wd.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(5)
+
+    def load_yahoo(self):
+        """Function for Yahoo Images to scroll to new images after finishing all existing images"""
+        logger.info("Loading new images")
+        button = self.wd.find_element_by_name('more-res')
+        button.click()
+        time.sleep(5)
+
+    def get_google_images(self):
+        """Retrieve urls for images and captions from Google Images search engine"""
+        logger.info("Scraping google images")
+
+        self.wd.get(self.target_url)
+        img_data = {}
+
+        start = 0
+        prevLength = 0
+        while(len(img_data)<self.cfg.num_images):
+            self.scroll_to_end();i=0
+
+            thumbnail_results = self.wd.find_elements_by_css_selector("img.Q4LuWd")
+
+            if(len(thumbnail_results)==prevLength):
+                logger.info("Loaded all images")
+                break
+
+            prevLength = len(thumbnail_results)
+            logger.info(f"There are {len(thumbnail_results)} images")
+
+            for i,content in enumerate(thumbnail_results[start:len(thumbnail_results)]):
+                try:
+                    self.wd.execute_script("arguments[0].click();", content)
+                    time.sleep(1)
+
+                    common_path = f'//*[@id="islrg"]/div[1]/div[{i+1}]'
+
+                    caption = self.wd.find_element_by_xpath(f'{common_path}/a[2]').text
+
+                    # url = self.wd.find_elements_by_css_selector('img.n3VNCb')[0]
+                    
+                    url = self.wd.find_element_by_xpath(f'{common_path}/a[1]/div[1]/img')
+
+                    if url.get_attribute('src') and not url.get_attribute('src').endswith('gif') and url.get_attribute('src') not in img_data:
+
+                        now = datetime.now().astimezone()
+                        now = now.strftime("%m-%d-%Y %H:%M:%S %z %Z")
+
+                        img_data[f'{len(img_data)}.jpg']={
+                            'query':self.cfg.query,
+                            'url':url.get_attribute('src'),
+                            'caption':caption,
+                            'datetime': now,
+                            'source': 'google',
+                            'public_ip': self.public_ip
+                        }
+                        logger.info(f"Finished {len(img_data)} images.")
+                
+                except:
+                    logger.debug("Couldn't load image and caption")
+                
+                if(len(img_data)>self.cfg.num_images-1): 
+                    logger.info("Loaded all the images and captions!")
+                    break
+            
+            start = len(thumbnail_results)
+
+        return img_data
+
+    def get_yahoo_images(self):
+        """Retrieve urls for images and captions from Yahoo Images search engine"""
+
+        logger.info("Scraping yahoo images")
+
+        self.wd.get(self.target_url)
+
+        # Accept cookie
+        try:
+            button = self.wd.find_element_by_xpath('//*[@id="consent-page"]/div/div/div/form/div[2]/div[2]/button')
+            button.click()
+        except:
+            pass
+
+        img_data = {}
+
+        start = 0
+        i=0
+        while(len(img_data)<self.cfg.num_images):
+            # self.scroll_to_end()
+            try: self.load_yahoo()
+            except: 
+                logger.info("Loaded all images")
+                break
+
+            html_list = self.wd.find_element_by_xpath('//*[@id="sres"]')
+            items = html_list.find_elements_by_tag_name("li")
+
+            logger.info(f"There are {len(items)} images")
+
+            for content in items[start:len(items)-1]:
+                try:
+                    self.wd.execute_script("arguments[0].click();", content)
+                    time.sleep(0.5)
+                except: # Exception as e:
+                    new_html_list = self.wd.find_element_by_id("sres")
+                    new_items = new_html_list.find_elements_by_tag_name("li")
+                    item = new_items[i]
+                    self.wd.execute_script("arguments[0].click();", item)
+                i+=1
+                # caption = self.wd.find_element_by_class_name('title').text
+
+                try:
+                    url = content.find_element_by_tag_name('img')
+
+                    if url.get_attribute('src') and not url.get_attribute('src').endswith('gif') and url.get_attribute('src') not in img_data:
+
+                        now = datetime.now().astimezone()
+                        now = now.strftime("%m-%d-%Y %H:%M:%S %z %Z")
+
+                        img_data[f'{len(img_data)}.jpg']={
+                            'query':self.cfg.query,
+                            'url':url.get_attribute('src'),
+                            'caption':self.cfg.query, # caption
+                            'datetime': now,
+                            'source': 'google',
+                            'public_ip': self.public_ip
+                        }
+                        logger.info(f"Finished {len(img_data)} images.")
+                
+                except:
+                    logger.debug("Couldn't load image and caption")
+
+                if(len(img_data)>self.cfg.num_images-1): 
+                    logger.info("Loaded all images")
+                    break
+            
+            start = len(items)
+        return img_data
+
+    def get_flickr_images(self):
+        """Retrieve urls for images and captions from Flickr Images search engine"""
+        logger.info("Scraping flickr images")
+
+        self.wd.get(self.target_url)
+        img_data = {}
+
+        start = 0
+        prevLength = 0
+        waited = False
+        while(len(img_data)<self.cfg.num_images):
+            self.scroll_to_end()
+            # scroll_to_end_flickr()
+
+            items = self.wd.find_elements_by_xpath('/html/body/div[1]/div/main/div[2]/div/div[2]/div')
+
+            if(len(items)==prevLength):
+                if not waited:
+                    self.wd.implicitly_wait(25)
+                    waited = True
+                else:
+                    print("Loaded all images")
+                    break
+            prevLength = len(items)
+
+            for item in items[start:len(items)-1]:
+                style = item.get_attribute('style')
+                url = re.search(r'url\("//(.+?)"\);',style)
+                if url: 
+                    url = "http://"+url.group(1)
+                    caption = item.find_element_by_class_name('interaction-bar').get_attribute('title')
+                    caption = caption[:re.search(r'\bby\b',caption).start()].strip()
+                    # img_data[url]=caption
+
+                    now = datetime.now().astimezone()
+                    now = now.strftime("%m-%d-%Y %H:%M:%S %z %Z")
+
+                    img_data[f'{len(img_data)}.jpg']={
+                        'query':self.cfg.query,
+                        'url':url,
+                        'caption':caption,
+                        'datetime': now,
+                        'source': 'flickr',
+                        'public_ip': self.public_ip
+                    }
+
+                    print(f"Finished {len(img_data)} images.")
+                if(len(img_data)>self.cfg.num_images-1): break
+            start = len(items)
+        return img_data
+
+    def save_pictures_and_captions(self,img_data):
+        """Retrieve the images and save them in directory with the captions"""
+        query = '_'.join(self.cfg.query.lower().split())
+        
+        out_dir = self.cfg.out_dir
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        os.chdir(out_dir)
+
+        target_folder = os.path.join(f'{self.cfg.engine}', query)
+        Path(target_folder).mkdir(parents=True, exist_ok=True)
+
+        result_items = img_data.copy()
+
+        for i,(key,val) in enumerate(img_data.items()):
+            try:
+                url = val['url']
+
+                if(url.startswith('http')):
+                    read_http(url,self.cfg.engine,query,i)
+
+                elif(url.startswith('data')):
+                    read_base64(url,self.cfg.engine,query,i)
+
+                else:
+                    del result_items[key]
+                    logger.debug(f"Couldn't save image {i}: not http nor base64 encoded.")
+            except:
+                del result_items[key]
+                logger.debug(f"Couldn't save image {i}")
+
+        file_path = f'{self.cfg.engine}/{query}/{query}.json'
+        with open(file_path, 'w+') as fp:
+            json.dump(result_items, fp)
+        logger.info("Saved urls file at:",os.path.join(os.getcwd(),file_path))
+
+    def save_URLS(self,img_data):
+        """Save only the meta data without the images"""
+        file_path = f'{self.cfg.out_dir}/{self.cfg.engine}/{self.cfg.query}'
+        Path(file_path).mkdir(parents=True, exist_ok=True)
+        file_path += f"/{self.cfg.query}_urls.json"
+        with open(file_path, 'w+') as fp:
+            json.dump(img_data, fp)
+        logger.info("Saved urls file at:",os.path.join(os.getcwd(),file_path))
+
+class QueryExpander():
+    def __init__(self) -> None:
+        pass
+
+    def get_synonyms(self, word, k):
+        """ Generate synonyms """
+        synonyms = []
+        word = wordnet.synset(f"{word}.n.01")
+        for syn in wordnet.synsets(word):
+            for l in syn.lemmas():
+                # print(l,word.path_similarity(syn))
+                synonyms.append(l.name())
+                if len(synonyms)>k: break
+            if len(synonyms)>k: break
+
+        return set(synonyms)
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--engine',required=True,type=str)
+    parser.add_argument('--num_images',required=True,type=int)
+    parser.add_argument('--query',required=True,type=str)
+    parser.add_argument('--out_dir',type=str,default='images')
+    parser.add_argument('--headless', action='store_true')
+    parser.add_argument('--driver', type=str,default="chromedriver")
+    args = parser.parse_args()
+
+    cfg = config(args)
+
+    scraper = Image_Caption_Scraper(cfg)
+
+    img_data = scraper.scrape()
+
+    # scraper.save_json_URLS(img_data)
+
+    # scraper.save_pictures_and_captions(img_data)
+
+    scraper.save_URLS(img_data)
