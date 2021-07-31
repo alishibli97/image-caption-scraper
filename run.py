@@ -13,9 +13,7 @@ from pathlib import Path
 import io
 from PIL import Image
 from helper import *
-
-from nltk.corpus import wordnet
-
+from expansion import *
 
 class config():
     def __init__(self,args):
@@ -136,7 +134,8 @@ class Image_Caption_Scraper():
                     logger.debug("Couldn't load image and caption")
                 
                 if(len(img_data)>self.cfg.num_images-1): 
-                    logger.info("Loaded all the images and captions!")
+                    logger.info("Finished!")
+                    # logger.info("Loaded all the images and captions!")
                     break
             
             start = len(thumbnail_results)
@@ -264,7 +263,7 @@ class Image_Caption_Scraper():
             start = len(items)
         return img_data
 
-    def save_pictures_and_captions(self,img_data):
+    def save_images_and_captions(self,img_data):
         """Retrieve the images and save them in directory with the captions"""
         query = '_'.join(self.cfg.query.lower().split())
         
@@ -297,33 +296,22 @@ class Image_Caption_Scraper():
         file_path = f'{self.cfg.engine}/{query}/{query}.json'
         with open(file_path, 'w+') as fp:
             json.dump(result_items, fp)
-        logger.info("Saved urls file at:",os.path.join(os.getcwd(),file_path))
+        logger.info(f"Saved urls file at: {os.path.join(os.getcwd(),file_path)}")
 
-    def save_URLS(self,img_data):
+    def save_images_data(self,img_data):
         """Save only the meta data without the images"""
-        file_path = f'{self.cfg.out_dir}/{self.cfg.engine}/{self.cfg.query}'
+
+        query = '_'.join(self.cfg.query.lower().split())
+        out_dir = self.cfg.out_dir
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        os.chdir(out_dir)
+
+        file_path = f'{self.cfg.engine}/{query}'
         Path(file_path).mkdir(parents=True, exist_ok=True)
-        file_path += f"/{self.cfg.query}_urls.json"
+        file_path += f'/{query}.json'
         with open(file_path, 'w+') as fp:
             json.dump(img_data, fp)
-        logger.info("Saved urls file at:",os.path.join(os.getcwd(),file_path))
-
-class QueryExpander():
-    def __init__(self) -> None:
-        pass
-
-    def get_synonyms(self, word, k):
-        """ Generate synonyms """
-        synonyms = []
-        word = wordnet.synset(f"{word}.n.01")
-        for syn in wordnet.synsets(word):
-            for l in syn.lemmas():
-                # print(l,word.path_similarity(syn))
-                synonyms.append(l.name())
-                if len(synonyms)>k: break
-            if len(synonyms)>k: break
-
-        return set(synonyms)
+        logger.info(f"Saved json data file at: {os.path.join(os.getcwd(),file_path)}")
 
 if __name__ == "__main__":
 
@@ -342,8 +330,6 @@ if __name__ == "__main__":
 
     img_data = scraper.scrape()
 
-    # scraper.save_json_URLS(img_data)
+    # scraper.save_images_and_captions(img_data)
 
-    # scraper.save_pictures_and_captions(img_data)
-
-    scraper.save_URLS(img_data)
+    scraper.save_images_data(img_data)

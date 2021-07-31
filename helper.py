@@ -20,7 +20,6 @@ def read_http(url, engine, query, i):
         img.save(f, "JPEG", quality=95)
         logger.info(f"Saved image {i}")
 
-
 def read_base64(url, engine, query, i):
     # logger.info("Image is base64")
     base64_img = url.split(',')[1]
