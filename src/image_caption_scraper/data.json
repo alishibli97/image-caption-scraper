@@ -1,0 +1,10 @@
+{
+    "engine": "all",
+    "num_images": 100,
+    "query": "dog chases cat",
+    "out_dir": "images",
+    "headless": true,
+    "driver": "chromedriver",
+    "expand": true,
+    "k": 3
+}

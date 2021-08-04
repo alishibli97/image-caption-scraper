@@ -1,36 +1,47 @@
-import argparse
+import time
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from loguru import logger
-import time
 from datetime import datetime
 import re
 import json
 import os
 from pathlib import Path
-import io
-from PIL import Image
-from helper import *
-from expansion import *
+from .helper import *
+import uuid
+import json
+# print(uuid.uuid4())
 
-class config():
+class parse_args():
     def __init__(self,args):
-        self.engine = args.engine
-        self.num_images = args.num_images
-        self.query = args.query
-        self.out_dir = args.out_dir
-        self.headless = args.headless
-        self.driver = args.driver
+        self.engine = args["engine"]
+        self.num_images = args["num_images"]
+        self.query = args["query"]
+        self.out_dir = args["out_dir"]
+        self.headless = args["headless"]
+        self.driver = args["driver"]
+        self.expand = args["expand"]
+        self.k = args["k"]
 
 class Image_Caption_Scraper():
 
-    def __init__(self, cfg):
+    def __init__(self):
         """Initialization is only starting the web driver and getting the public IP address"""
         logger.info("Initializing scraper")
-        self.cfg = cfg
+        
         self.public_ip = self.get_public_ip_address()
+        self.google_start_index = 0
+
+    def initialize(self, **kwargs):
+        if not kwargs:
+            print("No values")
+        else:
+            print("There")
+        return
+        args=json.load(open("data.json"))
+        self.cfg = parse_args(args)
         self.start_web_driver()
 
     def get_public_ip_address(self):
@@ -44,29 +55,39 @@ class Image_Caption_Scraper():
         """Create the webdriver and point it to the specific search engine"""
         logger.info("Starting the engine")
         chrome_options = Options()
-        chrome_options.headless = cfg.headless
+        chrome_options.headless = self.cfg.headless
         self.wd = webdriver.Chrome(options=chrome_options,executable_path=self.cfg.driver)
 
     def scrape(self):
         """Main function to scrape"""
-        self.set_target_url()
         if self.cfg.engine=='google': img_data = self.get_google_images()
         elif self.cfg.engine=='yahoo': img_data = self.get_yahoo_images()
         elif self.cfg.engine=='flickr': img_data = self.get_flickr_images()
-        else: return
+        else: # all 3
+            self.cfg.num_images = int(self.cfg.num_images/3) + 1
+            img_data1 = self.get_google_images()
+            img_data2 = self.get_yahoo_images()
+            if not img_data2:
+                self.google_start_index += self.cfg.num_images
+                img_data2 = self.get_google_images(self.google_start_index)
+            img_data3 = self.get_flickr_images()
+            if len(img_data3)<self.cfg.num_images:
+                self.google_start_index += self.cfg.num_images
+                img_data3 = self.get_google_images(self.google_start_index)
+            img_data = {**img_data1,**img_data2,**img_data3}
         return img_data
 
-    def set_target_url(self):
+    def set_target_url(self,engine):
         """Given the target engine and query, build the target url"""
         url_index = {
             'google': "https://www.google.com/search?safe=off&site=&tbm=isch&source=hp&q={}&oq={}&gs_l=img".format(self.cfg.query,self.cfg.query),
             'yahoo': "https://images.search.yahoo.com/search/images;?&p={}&ei=UTF-8&iscqry=&fr=sfp".format(self.cfg.query),
             'flickr': "https://www.flickr.com/search/?text={}".format(self.cfg.query)
         }
-        if not self.cfg.engine in url_index: 
-            logger.debug(f"Please choose {' or '.join(k for k in url_index)}.")
+        if not engine in url_index: 
+            logger.error(f"Please choose {' or '.join(k for k in url_index)}.")
             return
-        self.target_url = url_index[self.cfg.engine]
+        self.target_url = url_index[engine]
 
     def scroll_to_end(self):
         """Function for Google Images to scroll to new images after finishing all existing images"""
@@ -79,16 +100,17 @@ class Image_Caption_Scraper():
         logger.info("Loading new images")
         button = self.wd.find_element_by_name('more-res')
         button.click()
-        time.sleep(5)
+        time.sleep(3)
 
-    def get_google_images(self):
+    def get_google_images(self,start=0):
         """Retrieve urls for images and captions from Google Images search engine"""
         logger.info("Scraping google images")
+        self.set_target_url("google")
 
         self.wd.get(self.target_url)
         img_data = {}
 
-        start = 0
+        # start = 0
         prevLength = 0
         while(len(img_data)<self.cfg.num_images):
             self.scroll_to_end();i=0
@@ -96,11 +118,11 @@ class Image_Caption_Scraper():
             thumbnail_results = self.wd.find_elements_by_css_selector("img.Q4LuWd")
 
             if(len(thumbnail_results)==prevLength):
-                logger.info("Loaded all images")
+                logger.info("Loaded all images for Google")
                 break
 
             prevLength = len(thumbnail_results)
-            logger.info(f"There are {len(thumbnail_results)} images")
+            # logger.info(f"There are {len(thumbnail_results)} images")
 
             for i,content in enumerate(thumbnail_results[start:len(thumbnail_results)]):
                 try:
@@ -120,7 +142,8 @@ class Image_Caption_Scraper():
                         now = datetime.now().astimezone()
                         now = now.strftime("%m-%d-%Y %H:%M:%S %z %Z")
 
-                        img_data[f'{len(img_data)}.jpg']={
+                        name = uuid.uuid4() # len(img_data)
+                        img_data[f'{name}.jpg']={
                             'query':self.cfg.query,
                             'url':url.get_attribute('src'),
                             'caption':caption,
@@ -128,13 +151,12 @@ class Image_Caption_Scraper():
                             'source': 'google',
                             'public_ip': self.public_ip
                         }
-                        logger.info(f"Finished {len(img_data)} images.")
-                
+                        logger.info(f"Finished {len(img_data)}/{self.cfg.num_images} images for Google.")
                 except:
-                    logger.debug("Couldn't load image and caption")
+                    logger.debug("Couldn't load image and caption for Google")
                 
                 if(len(img_data)>self.cfg.num_images-1): 
-                    logger.info("Finished!")
+                    logger.info(f"Finished scraping {self.cfg.num_images} for Google!")
                     # logger.info("Loaded all the images and captions!")
                     break
             
@@ -144,33 +166,33 @@ class Image_Caption_Scraper():
 
     def get_yahoo_images(self):
         """Retrieve urls for images and captions from Yahoo Images search engine"""
-
         logger.info("Scraping yahoo images")
+        self.set_target_url("yahoo")
 
         self.wd.get(self.target_url)
-
-        # Accept cookie
-        try:
-            button = self.wd.find_element_by_xpath('//*[@id="consent-page"]/div/div/div/form/div[2]/div[2]/button')
-            button.click()
-        except:
-            pass
 
         img_data = {}
 
         start = 0
         i=0
         while(len(img_data)<self.cfg.num_images):
+            # Accept cookie
+            try:
+                button = self.wd.find_element_by_xpath('//*[@id="consent-page"]/div/div/div/form/div[2]/div[2]/button')
+                button.click()
+            except:
+                pass
+
             # self.scroll_to_end()
             try: self.load_yahoo()
             except: 
-                logger.info("Loaded all images")
+                logger.info("Loaded all images for Yahoo")
                 break
 
             html_list = self.wd.find_element_by_xpath('//*[@id="sres"]')
             items = html_list.find_elements_by_tag_name("li")
 
-            logger.info(f"There are {len(items)} images")
+            # logger.info(f"There are {len(items)} images")
 
             for content in items[start:len(items)-1]:
                 try:
@@ -192,7 +214,8 @@ class Image_Caption_Scraper():
                         now = datetime.now().astimezone()
                         now = now.strftime("%m-%d-%Y %H:%M:%S %z %Z")
 
-                        img_data[f'{len(img_data)}.jpg']={
+                        name = uuid.uuid4() # len(img_data)
+                        img_data[f'{name}.jpg']={
                             'query':self.cfg.query,
                             'url':url.get_attribute('src'),
                             'caption':self.cfg.query, # caption
@@ -200,13 +223,13 @@ class Image_Caption_Scraper():
                             'source': 'google',
                             'public_ip': self.public_ip
                         }
-                        logger.info(f"Finished {len(img_data)} images.")
+                        logger.info(f"Finished {len(img_data)}/{self.cfg.num_images} images for Yahoo.")
                 
                 except:
-                    logger.debug("Couldn't load image and caption")
+                    logger.debug("Couldn't load image and caption for Yahoo")
 
                 if(len(img_data)>self.cfg.num_images-1): 
-                    logger.info("Loaded all images")
+                    logger.info(f"Finished scraping {self.cfg.num_images} for Yahoo!")
                     break
             
             start = len(items)
@@ -215,6 +238,7 @@ class Image_Caption_Scraper():
     def get_flickr_images(self):
         """Retrieve urls for images and captions from Flickr Images search engine"""
         logger.info("Scraping flickr images")
+        self.set_target_url("flickr")
 
         self.wd.get(self.target_url)
         img_data = {}
@@ -233,7 +257,7 @@ class Image_Caption_Scraper():
                     self.wd.implicitly_wait(25)
                     waited = True
                 else:
-                    print("Loaded all images")
+                    # print("Loaded all images")
                     break
             prevLength = len(items)
 
@@ -241,25 +265,30 @@ class Image_Caption_Scraper():
                 style = item.get_attribute('style')
                 url = re.search(r'url\("//(.+?)"\);',style)
                 if url: 
-                    url = "http://"+url.group(1)
-                    caption = item.find_element_by_class_name('interaction-bar').get_attribute('title')
-                    caption = caption[:re.search(r'\bby\b',caption).start()].strip()
-                    # img_data[url]=caption
+                    try:
+                        url = "http://"+url.group(1)
+                        caption = item.find_element_by_class_name('interaction-bar').get_attribute('title')
+                        caption = caption[:re.search(r'\bby\b',caption).start()].strip()
+                        # img_data[url]=caption
 
-                    now = datetime.now().astimezone()
-                    now = now.strftime("%m-%d-%Y %H:%M:%S %z %Z")
+                        now = datetime.now().astimezone()
+                        now = now.strftime("%m-%d-%Y %H:%M:%S %z %Z")
 
-                    img_data[f'{len(img_data)}.jpg']={
-                        'query':self.cfg.query,
-                        'url':url,
-                        'caption':caption,
-                        'datetime': now,
-                        'source': 'flickr',
-                        'public_ip': self.public_ip
-                    }
+                        name = uuid.uuid4() # len(img_data)
+                        img_data[f'{name}.jpg']={
+                            'query':self.cfg.query,
+                            'url':url,
+                            'caption':caption,
+                            'datetime': now,
+                            'source': 'flickr',
+                            'public_ip': self.public_ip
+                        }
 
-                    print(f"Finished {len(img_data)} images.")
-                if(len(img_data)>self.cfg.num_images-1): break
+                        logger.info(f"Finished {len(img_data)}/{self.cfg.num_images} images for Flickr.")
+                    except: pass                    
+                if(len(img_data)>self.cfg.num_images-1): 
+                    logger.info(f"Finished scraping {self.cfg.num_images} for Flickr!")
+                    break
             start = len(items)
         return img_data
 
@@ -300,7 +329,6 @@ class Image_Caption_Scraper():
 
     def save_images_data(self,img_data):
         """Save only the meta data without the images"""
-
         query = '_'.join(self.cfg.query.lower().split())
         out_dir = self.cfg.out_dir
         Path(out_dir).mkdir(parents=True, exist_ok=True)
@@ -312,24 +340,3 @@ class Image_Caption_Scraper():
         with open(file_path, 'w+') as fp:
             json.dump(img_data, fp)
         logger.info(f"Saved json data file at: {os.path.join(os.getcwd(),file_path)}")
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--engine',required=True,type=str)
-    parser.add_argument('--num_images',required=True,type=int)
-    parser.add_argument('--query',required=True,type=str)
-    parser.add_argument('--out_dir',type=str,default='images')
-    parser.add_argument('--headless', action='store_true')
-    parser.add_argument('--driver', type=str,default="chromedriver")
-    args = parser.parse_args()
-
-    cfg = config(args)
-
-    scraper = Image_Caption_Scraper(cfg)
-
-    img_data = scraper.scrape()
-
-    # scraper.save_images_and_captions(img_data)
-
-    scraper.save_images_data(img_data)
