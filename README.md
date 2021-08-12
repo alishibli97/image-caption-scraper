@@ -4,7 +4,7 @@
 This package allows downloading images and their corresponding captions from web search engines like Google Images, Yahoo Image, Flickr, and more to come.
 
 ## Installation
-pip install -i https://test.pypi.org/simple/ image-caption-scraper-test
+`pip install -i https://test.pypi.org/simple/ image-caption-scraper-test`
 
 ## Requirements
 Python 3.6 or later with all [requirements.txt](https://github.com/alishibli97/image-caption-scraper/blob/main/requirements.txt) dependencies installed. To install run:
