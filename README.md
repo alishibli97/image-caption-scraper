@@ -1,6 +1,8 @@
 # image-caption-scraper
 
-This is a simple initial readme. You can use
-[Github-flavored Markdown](https://github.com/alishibli97/image-caption-scraper/)
-to write your content.
+## Requirements
+Python 3.6 or later with all [requirements.txt](https://github.com/alishibli97/KTH-Deep-Learning-Project/blob/main/requirements.txt) dependencies installed. To install run:
 
+`pip install -r requirements.txt`
+
+## Usage
