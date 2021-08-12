@@ -1,0 +1,15 @@
+LICENSE
+README.md
+pyproject.toml
+setup.cfg
+setup.py
+src/example_pkg_alishibli97.egg-info/PKG-INFO
+src/example_pkg_alishibli97.egg-info/SOURCES.txt
+src/example_pkg_alishibli97.egg-info/dependency_links.txt
+src/example_pkg_alishibli97.egg-info/top_level.txt
+src/image_caption_scraper/__init__.py
+src/image_caption_scraper/expansion.py
+src/image_caption_scraper/helper.py
+src/image_caption_scraper/main.py
+src/image_caption_scraper/scraper.py
+src/image_caption_scraper/try.py

@@ -4,16 +4,16 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="example-pkg-alishibli97",
+    name="image_caption_scraper_test",
     version="0.0.1",
     author="Ali Shibli",
     author_email="alishibli97@hotmail.com",
     description="A small example package",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/pypa/sampleproject",
+    url="https://github.com/alishibli97/image-caption-scraper",
     project_urls={
-        "Bug Tracker": "https://github.com/pypa/sampleproject/issues",
+        "Bug Tracker": "https://github.com/alishibli97/image-caption-scraper/issues",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
