@@ -9,8 +9,16 @@ Python 3.6 or later with all [requirements.txt](https://github.com/alishibli97/i
 ```
 from image_caption_scraper import Image_Caption_Scraper
 
-scraper = Image_Caption_Scraper()
-scraper.scrape()
-```
+scraper = Image_Caption_Scraper(
+                engine="all", # or "google", "yahoo", "flickr"
+                num_images=100,
+                query="dog chases cat",
+                out_dir="images",
+                headless=True,
+                driver="chromedriver",
+                expand=True,
+                k=3
+            )
 
-The constructor for Image_Caption_Scraper takes:
+scraper.scrape(save_images=True)
+```
