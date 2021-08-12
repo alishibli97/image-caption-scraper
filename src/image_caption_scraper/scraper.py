@@ -9,39 +9,22 @@ import re
 import json
 import os
 from pathlib import Path
-from .helper import *
+from helper import *
 import uuid
 import json
 # print(uuid.uuid4())
 
-class parse_args():
-    def __init__(self,args):
-        self.engine = args["engine"]
-        self.num_images = args["num_images"]
-        self.query = args["query"]
-        self.out_dir = args["out_dir"]
-        self.headless = args["headless"]
-        self.driver = args["driver"]
-        self.expand = args["expand"]
-        self.k = args["k"]
 
 class Image_Caption_Scraper():
 
-    def __init__(self):
+    def __init__(self,engine="all",num_images=100,query="dog chases cat",out_dir="images",headless=True,driver="chromedriver",expand=True,k=3):
         """Initialization is only starting the web driver and getting the public IP address"""
         logger.info("Initializing scraper")
         
         self.public_ip = self.get_public_ip_address()
         self.google_start_index = 0
 
-    def initialize(self, **kwargs):
-        if not kwargs:
-            print("No values")
-        else:
-            print("There")
-        return
-        args=json.load(open("data.json"))
-        self.cfg = parse_args(args)
+        self.cfg = parse_args(engine,num_images,query,out_dir,headless,driver,expand,k)
         self.start_web_driver()
 
     def get_public_ip_address(self):
@@ -58,7 +41,7 @@ class Image_Caption_Scraper():
         chrome_options.headless = self.cfg.headless
         self.wd = webdriver.Chrome(options=chrome_options,executable_path=self.cfg.driver)
 
-    def scrape(self):
+    def scrape(self,save_images=True):
         """Main function to scrape"""
         if self.cfg.engine=='google': img_data = self.get_google_images()
         elif self.cfg.engine=='yahoo': img_data = self.get_yahoo_images()
@@ -75,7 +58,11 @@ class Image_Caption_Scraper():
                 self.google_start_index += self.cfg.num_images
                 img_data3 = self.get_google_images(self.google_start_index)
             img_data = {**img_data1,**img_data2,**img_data3}
-        return img_data
+
+        if save_images:
+            self.save_images_and_captions(img_data)
+        else:
+            self.save_images_data(img_data)
 
     def set_target_url(self,engine):
         """Given the target engine and query, build the target url"""
