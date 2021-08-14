@@ -1,5 +1,8 @@
 # image-caption-scraper
 
+![alt text](https://github.com/alishibli97/image-caption-scraper/blob/main/logo.jpg)
+
+
 ## About
 
 This package allows downloading images and their corresponding captions from web search engines like Google Images, Yahoo Image, Flickr, and more to come.
@@ -14,8 +17,6 @@ The model is particularly targetting researchers for building their own datasets
 **[Contact](#Contact)**<br>
 **[TODO](#TODO)**<br> 
 -->
-
-![alt text](https://github.com/alishibli97/image-caption-scraper/blob/main/logo.jpg)
 
 <details open="open">
   <summary>Table of Contents</summary>
