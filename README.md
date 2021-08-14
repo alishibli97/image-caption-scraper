@@ -40,7 +40,7 @@ The pipeline is completely based on Selenium web driver.
 </details>
 
 ## Installation
-`pip install -i https://test.pypi.org/simple/ image-caption-scraper-test==0.0.4`
+`pip install image-caption-scraper`
 
 ## Requirements
 Python 3.6 or later with all [requirements.txt](https://github.com/alishibli97/image-caption-scraper/blob/main/requirements.txt) dependencies installed. To install run:
