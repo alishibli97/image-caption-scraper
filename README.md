@@ -6,6 +6,10 @@ This package allows downloading images and their corresponding captions from web
 
 The model is particularly targetting researchers for building their own datasets of their own concepts, and can thus train machine learning models for computer vision, natural language processing, and the intersection of both (image captioning, visual relationship detection).
 
+### Table of Contents
+**[Installation Instructions](#Installation)**<br>
+
+
 ## Installation
 `pip install -i https://test.pypi.org/simple/ image-caption-scraper-test`
 
@@ -13,6 +17,8 @@ The model is particularly targetting researchers for building their own datasets
 Python 3.6 or later with all [requirements.txt](https://github.com/alishibli97/image-caption-scraper/blob/main/requirements.txt) dependencies installed. To install run:
 
 `pip install -r requirements.txt`
+
+Also, make sure to download chrome-driver from https://chromedriver.chromium.org/ and either add it to the system variables path, or type down the full path to the .exe file in the options below.
 
 ## Usage
 ```
