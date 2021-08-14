@@ -25,7 +25,7 @@ scraper = Image_Caption_Scraper(
                 out_dir="images",
                 headless=True,
                 driver="chromedriver",
-                expand=True,
+                expand=False,
                 k=3
             )
 
