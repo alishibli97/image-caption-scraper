@@ -28,3 +28,14 @@ scraper = Image_Caption_Scraper(
 
 scraper.scrape(save_images=True)
 ```
+###### Options
+| Argument        | Description           | Options  |
+| ------------- |:-------------:| -----:|
+| engine      | the search engine to scrape images from. By default it searches through all the available engines (now Google, Flickr, Yahoo). | "all","google","flickr","yahoo" |
+| num_images      | centered      |   $12 |
+| query | are neat      |    $1 |
+| out_dir | are neat      |    $1 |
+| headless | are neat      |    $1 |
+| expand | are neat      |    $1 |
+
+1. engine: the search engine to scrape images from. By default it searches through all the available engines (now Google, Yahoo, Flickr).
