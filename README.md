@@ -38,3 +38,12 @@ scraper.scrape(save_images=True)
 | headless | Argument to hide the browser while crawling the web pages or show it. True will hide, False will open it  | 'True' or 'False' |
 | expand | Argument to expand the input query. Expansions supports synonyms from wordnet at the moment. Translations are coming soon.   | 'True' or 'False' |
 | k | If expand==True, k determines how many synonyms to fetch from wordnet for each word in the query. It is assumed that words are separated by spaces. The model fetches the closest k synonyms for each word by path_similarity in the wordnet graph.   | 'True' or 'False' |
+
+
+## TODO
+1. Verify large dataset collections (quality and time wise)
+2. Implement parallel execution for faster data collection
+3. Expand queries using more methods like transations and other.
+
+## Contact
+Email: alishibli97@hotmail.com
