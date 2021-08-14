@@ -39,6 +39,9 @@ scraper.scrape(save_images=True)
 | expand | Argument to expand the input query. Expansions supports synonyms from wordnet at the moment. Translations are coming soon.   | 'True' or 'False' |
 | k | If expand==True, k determines how many synonyms to fetch from wordnet for each word in the query. It is assumed that words are separated by spaces. The model fetches the closest k synonyms for each word by path_similarity in the wordnet graph.   | 'True' or 'False' |
 
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
 
 ## TODO
 1. Verify large dataset collections (quality and time wise)
