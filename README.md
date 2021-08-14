@@ -7,12 +7,11 @@ This package allows downloading images and their corresponding captions from web
 The model is particularly targetting researchers for building their own datasets of their own concepts, and can thus train machine learning models for computer vision, natural language processing, and the intersection of both (image captioning, visual relationship detection).
 
 ### Table of Contents
-**[Installation](#Installation)**<br>
-**[Requirements](#Requirements)**<br>
-**[Usage](#Usage)**<br>
-**[Options](#Options)**<br>
-**[Contact](#Contact)**<br>
-**[TODO](#TODO)**<br>
+*[Installation](#Installation)**<br>
+*[Requirements](#Requirements)**<br>
+*[Usage](#Usage)**<br>
+*[Contact](#Contact)**<br>
+*[TODO](#TODO)**<br>
 
 ## Installation
 `pip install -i https://test.pypi.org/simple/ image-caption-scraper-test`
