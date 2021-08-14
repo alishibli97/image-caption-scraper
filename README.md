@@ -8,6 +8,7 @@ The model is particularly targetting researchers for building their own datasets
 
 ### Table of Contents
 **[Installation](#Installation)**<br>
+<li><a href="#Installation">Installation</a></li>
 **[Requirements](#Requirements)**<br>
 **[Usage](#Usage)**<br>
 **[Contact](#Contact)**<br>
