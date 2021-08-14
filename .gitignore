@@ -5,3 +5,4 @@ trial.py
 src/image_caption_scraper/Untitled.ipynb
 dist
 clear.sh
+src/image_caption_scraper_test.egg-info/
