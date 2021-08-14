@@ -28,14 +28,13 @@ scraper = Image_Caption_Scraper(
 
 scraper.scrape(save_images=True)
 ```
-###### Options
+### Options
 | Argument        | Description           | Options  |
 | ------------- |:-------------:| -----:|
-| engine      | the search engine to scrape images from. By default it searches through all the available engines (now Google, Flickr, Yahoo). | "all","google","flickr","yahoo" |
-| num_images      | centered      |   $12 |
-| query | are neat      |    $1 |
-| out_dir | are neat      |    $1 |
-| headless | are neat      |    $1 |
-| expand | are neat      |    $1 |
-
-1. engine: the search engine to scrape images from. By default it searches through all the available engines (now Google, Yahoo, Flickr).
+| engine      | Search engine to scrape images from. By default it searches through all the available engines (currently supports Google, Flickr, Yahoo). | "all","google","flickr","yahoo" |
+| num_images      | Number of images targetted by the user      |  Any number (int) > 0 |
+| query | The text query to search for      | Any text query |
+| out_dir | Output directly to save the images and captions      |  Any text string |
+| headless | Argument to hide the browser while crawling the web pages or show it. True will hide, False will open it  | 'True' or 'False' |
+| expand | Argument to expand the input query. Expansions supports synonyms from wordnet at the moment. Translations are coming soon.   | 'True' or 'False' |
+| k | If expand==True, k determines how many synonyms to fetch from wordnet for each word in the query. It is assumed that words are separated by spaces. The model fetches the closest k synonyms for each word by path_similarity in the wordnet graph.   | 'True' or 'False' |
