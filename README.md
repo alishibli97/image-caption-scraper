@@ -4,7 +4,7 @@
 
 This package allows downloading images and their corresponding captions from web search engines like Google Images, Yahoo Image, Flickr, and more to come.
 
-The model is particularly targetting researchers for building their own datasets of their own concepts, and can thus train machine learning models from computer vision, natural language processing, and the intersection of both (image captioning, visual relationship detection).
+The model is particularly targetting researchers for building their own datasets of their own concepts, and can thus train machine learning models for computer vision, natural language processing, and the intersection of both (image captioning, visual relationship detection).
 
 ## Installation
 `pip install -i https://test.pypi.org/simple/ image-caption-scraper-test`
