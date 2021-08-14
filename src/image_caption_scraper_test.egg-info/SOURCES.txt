@@ -1,7 +1,6 @@
 LICENSE
 README.md
 pyproject.toml
-setup.cfg
 setup.py
 src/image_caption_scraper/__init__.py
 src/image_caption_scraper/expansion.py

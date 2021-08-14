@@ -15,6 +15,8 @@ The model is particularly targetting researchers for building their own datasets
 **[TODO](#TODO)**<br> 
 -->
 
+![alt text](https://github.com/alishibli97/image-caption-scraper/blob/main/logo.jpg)
+
 <details open="open">
   <summary>Table of Contents</summary>
   <ol>

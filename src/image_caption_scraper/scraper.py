@@ -12,8 +12,8 @@ from pathlib import Path
 from .helper import *
 import uuid
 import json
+from .expansion import *
 # print(uuid.uuid4())
-
 
 class Image_Caption_Scraper():
 
@@ -43,6 +43,27 @@ class Image_Caption_Scraper():
 
     def scrape(self,save_images=True):
         """Main function to scrape"""
+        img_data = {}
+        if self.cfg.expand:
+            queries_expanded = generate_synonyms(self.cfg.query,self.cfg.k)
+            # queries_expanded = list(set([trans for synonym in synonyms for trans in translate(synonym)]))
+
+            self.cfg.num_images /= len(queries_expanded)
+            for i,query in enumerate(queries_expanded):
+                logger.info(f"Scraping for query {query} ({i}/{len(queries_expanded)} queries)")
+                self.cfg.query = query
+                new_data = self.crawl()
+                img_data = {**img_data, **new_data}
+        else:
+            logger.info(f"Scraping for query {self.cfg.query}")
+            img_data = self.crawl()
+
+        if save_images:
+            self.save_images_and_captions(img_data)
+        else:
+            self.save_images_data(img_data)
+
+    def crawl(self):
         if self.cfg.engine=='google': img_data = self.get_google_images()
         elif self.cfg.engine=='yahoo': img_data = self.get_yahoo_images()
         elif self.cfg.engine=='flickr': img_data = self.get_flickr_images()
@@ -58,11 +79,7 @@ class Image_Caption_Scraper():
                 self.google_start_index += self.cfg.num_images
                 img_data3 = self.get_google_images(self.google_start_index)
             img_data = {**img_data1,**img_data2,**img_data3}
-
-        if save_images:
-            self.save_images_and_captions(img_data)
-        else:
-            self.save_images_data(img_data)
+        return img_data
 
     def set_target_url(self,engine):
         """Given the target engine and query, build the target url"""
