@@ -13,6 +13,23 @@ The model is particularly targetting researchers for building their own datasets
 **[Contact](#Contact)**<br>
 **[TODO](#TODO)**<br>
 
+<details open="open">
+  <summary>Table of Contents</summary>
+  <ol>
+    <li><a href="#Installation">Installation</a></li>
+    <li><a href="#Requirements">Requirements</a></li>
+    <li>
+      <a href="#Usage">Usage</a>
+      <ul>
+        <li><a href="#Options">Options</a></li>
+      </ul>
+    </li>
+    <li><a href="#License">License</a></li>
+    <li><a href="#Contact">Contact</a></li>
+    <li><a href="#TODO">TODO</a></li>
+  </ol>
+</details>
+
 ## Installation
 `pip install -i https://test.pypi.org/simple/ image-caption-scraper-test`
 
