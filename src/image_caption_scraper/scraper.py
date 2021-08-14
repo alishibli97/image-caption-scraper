@@ -17,7 +17,7 @@ from .expansion import *
 
 class Image_Caption_Scraper():
 
-    def __init__(self,engine="all",num_images=100,query="dog chases cat",out_dir="images",headless=True,driver="chromedriver",expand=True,k=3):
+    def __init__(self,engine="all",num_images=100,query="dog chases cat",out_dir="images",headless=True,driver="chromedriver",expand=False,k=3):
         """Initialization is only starting the web driver and getting the public IP address"""
         logger.info("Initializing scraper")
         

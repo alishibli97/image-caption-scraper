@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="image_caption_scraper_test",
-    version="0.0.2",
+    version="0.0.4",
     author="Ali Shibli",
     author_email="alishibli97@hotmail.com",
     description="A small example package",
