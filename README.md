@@ -1,6 +1,6 @@
 # image-caption-scraper
 
-![alt text](https://github.com/alishibli97/image-caption-scraper/blob/main/logo.jpg)
+![alt text](https://github.com/alishibli97/image-caption-scraper/blob/main/new_logo.jpg)
 
 
 ## About
