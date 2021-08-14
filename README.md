@@ -7,7 +7,12 @@ This package allows downloading images and their corresponding captions from web
 The model is particularly targetting researchers for building their own datasets of their own concepts, and can thus train machine learning models for computer vision, natural language processing, and the intersection of both (image captioning, visual relationship detection).
 
 ### Table of Contents
-**[Installation Instructions](#Installation)**<br>
+**[Installation](#Installation)**
+**[Requirements](#Requirements)**
+**[Usage](#Usage)**
+**[Options](#Options)**
+**[Contact](#Contact)**
+**[TODO](#TODO)**
 
 
 ## Installation
@@ -54,10 +59,10 @@ scraper.scrape(save_images=True)
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
+## Contact
+Email: alishibli97@hotmail.com
+
 ## TODO
 1. Verify large dataset collections (quality and time wise)
 2. Implement parallel execution for faster data collection
 3. Expand queries using more methods like transations and other.
-
-## Contact
-Email: alishibli97@hotmail.com
