@@ -29,10 +29,8 @@ class Image_Caption_Scraper():
 
     def get_public_ip_address(self):
         """Read the public IP address of the host"""
-        content = requests.get('https://www.whatismyip.org/my-ip-address').content
-        soup = BeautifulSoup(content,'html.parser')
-        public_ip = soup.find("a",{"href":"/my-ip-address"}).string
-        return public_ip
+        response = requests.get('https://api.ipify.org')
+        return response.text
 
     def start_web_driver(self):
         """Create the webdriver and point it to the specific search engine"""
