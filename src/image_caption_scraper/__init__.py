@@ -1,2 +1,2 @@
 from .scraper import *
-from .main import run
+# from .main import run

@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from loguru import logger
 from datetime import datetime
 import re
@@ -13,6 +14,9 @@ from .helper import *
 import uuid
 import json
 from .expansion import *
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+
 # print(uuid.uuid4())
 
 class Image_Caption_Scraper():
@@ -36,8 +40,12 @@ class Image_Caption_Scraper():
         """Create the webdriver and point it to the specific search engine"""
         logger.info("Starting the engine")
         chrome_options = Options()
-        chrome_options.headless = self.cfg.headless
-        self.wd = webdriver.Chrome(options=chrome_options,executable_path=self.cfg.driver)
+
+        if self.cfg.headless:
+            chrome_options.add_argument("--headless")
+
+        self.wd = webdriver.Chrome(options=chrome_options) # service=Service(executable_path=self.cfg.driver)
+
 
     def scrape(self,save_images=True):
         """Main function to scrape"""
@@ -100,7 +108,7 @@ class Image_Caption_Scraper():
     def load_yahoo(self):
         """Function for Yahoo Images to scroll to new images after finishing all existing images"""
         logger.info("Loading new images")
-        button = self.wd.find_element_by_name('more-res')
+        button = self.wd.find_element(By.NAME, 'more-res')
         button.click()
         time.sleep(3)
 
@@ -110,6 +118,16 @@ class Image_Caption_Scraper():
         self.set_target_url("google")
 
         self.wd.get(self.target_url)
+
+        time.sleep(2)
+        try:
+            button = self.wd.find_element(By.XPATH, "//button[contains(@class, 'VfPpkd-LgbsSe') and @jsname='b3VHJd']")
+            button.click()
+            time.sleep(2)
+        except (NoSuchElementException, ElementClickInterceptedException):
+            # Handle the exception or just pass
+            pass
+
         img_data = {}
 
         # start = 0
@@ -117,7 +135,7 @@ class Image_Caption_Scraper():
         while(len(img_data)<self.cfg.num_images):
             self.scroll_to_end();i=0
 
-            thumbnail_results = self.wd.find_elements_by_css_selector("img.Q4LuWd")
+            thumbnail_results = self.wd.find_elements(By.CSS_SELECTOR, "img.Q4LuWd")
 
             if(len(thumbnail_results)==prevLength):
                 logger.info("Loaded all images for Google")
@@ -133,11 +151,11 @@ class Image_Caption_Scraper():
 
                     common_path = f'//*[@id="islrg"]/div[1]/div[{i+1}]'
 
-                    caption = self.wd.find_element_by_xpath(f'{common_path}/a[2]').text
+                    caption = self.wd.find_element(By.XPATH, f'{common_path}/a[2]').text
 
                     # url = self.wd.find_elements_by_css_selector('img.n3VNCb')[0]
                     
-                    url = self.wd.find_element_by_xpath(f'{common_path}/a[1]/div[1]/img')
+                    url = self.wd.find_element(By.XPATH, f'{common_path}/a[1]/div[1]/img')
 
                     if url.get_attribute('src') and not url.get_attribute('src').endswith('gif') and url.get_attribute('src') not in img_data:
 
@@ -180,7 +198,7 @@ class Image_Caption_Scraper():
         while(len(img_data)<self.cfg.num_images):
             # Accept cookie
             try:
-                button = self.wd.find_element_by_xpath('//*[@id="consent-page"]/div/div/div/form/div[2]/div[2]/button')
+                button = self.wd.find_element(By.XPATH, '//*[@id="consent-page"]/div/div/div/form/div[2]/div[2]/button')
                 button.click()
             except:
                 pass
@@ -191,8 +209,8 @@ class Image_Caption_Scraper():
                 logger.info("Loaded all images for Yahoo")
                 break
 
-            html_list = self.wd.find_element_by_xpath('//*[@id="sres"]')
-            items = html_list.find_elements_by_tag_name("li")
+            html_list = self.wd.find_element(By.XPATH, '//*[@id="sres"]')
+            items = html_list.find_elements(By.TAG_NAME, "li")
 
             # logger.info(f"There are {len(items)} images")
 
@@ -201,15 +219,15 @@ class Image_Caption_Scraper():
                     self.wd.execute_script("arguments[0].click();", content)
                     time.sleep(0.5)
                 except: # Exception as e:
-                    new_html_list = self.wd.find_element_by_id("sres")
-                    new_items = new_html_list.find_elements_by_tag_name("li")
+                    new_html_list = self.wd.find_element(By.ID,"sres")
+                    new_items = new_html_list.find_elements(By.TAG_NAME,"li")
                     item = new_items[i]
                     self.wd.execute_script("arguments[0].click();", item)
                 i+=1
                 # caption = self.wd.find_element_by_class_name('title').text
 
                 try:
-                    url = content.find_element_by_tag_name('img')
+                    url = content.find_element(By.TAG_NAME,'img')
 
                     if url.get_attribute('src') and not url.get_attribute('src').endswith('gif') and url.get_attribute('src') not in img_data:
 
@@ -252,7 +270,7 @@ class Image_Caption_Scraper():
             self.scroll_to_end()
             # scroll_to_end_flickr()
 
-            items = self.wd.find_elements_by_xpath('/html/body/div[1]/div/main/div[2]/div/div[2]/div')
+            items = self.wd.find_elements(By.XPATH, '/html/body/div[1]/div/main/div[2]/div/div[2]/div')
 
             if(len(items)==prevLength):
                 if not waited:
@@ -269,7 +287,7 @@ class Image_Caption_Scraper():
                 if url: 
                     try:
                         url = "http://"+url.group(1)
-                        caption = item.find_element_by_class_name('interaction-bar').get_attribute('title')
+                        caption = item.find_element(By.CLASS_NAME, 'interaction-bar').get_attribute('title')
                         caption = caption[:re.search(r'\bby\b',caption).start()].strip()
                         # img_data[url]=caption
 

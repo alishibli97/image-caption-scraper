@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+src/image_caption_scraper/__init__.py
+src/image_caption_scraper/expansion.py
+src/image_caption_scraper/helper.py
+src/image_caption_scraper/scraper.py
+src/image_caption_scraper.egg-info/PKG-INFO
+src/image_caption_scraper.egg-info/SOURCES.txt
+src/image_caption_scraper.egg-info/dependency_links.txt
+src/image_caption_scraper.egg-info/top_level.txt
