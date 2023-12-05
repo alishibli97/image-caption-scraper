@@ -46,45 +46,21 @@ def generate_synonyms(phrase,k):
     
     return results
 
-def translate(phrase,driver="chromedriver"):
-    chrome_options = Options()
-    chrome_options.headless = True
-    wd = webdriver.Chrome(options=chrome_options,executable_path=driver)
+def translate_query(tokenizer, model, query, languages=["French", "German", "Romanian"]):
+    translations = {"English": query}
+    for language in languages:
+        task_prefix = f"translate English to {language}: "
+        inputs = tokenizer(task_prefix + query, 
+                                return_tensors="pt", padding=True)
 
-    # cookie accept
-    tl = "ar"
-    wd.get("https://translate.google.com.lb/?hl=en&tab=wT&sl=en&tl={tl}&text={phrase}&op=translate")
-    button = wd.find_element_by_xpath("/html/body/c-wiz/div/div/div/div[2]/div[1]/div[4]/form/div[1]/div/button/span")
-    button.click()
+        output_sequences = model.generate(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            do_sample=False  # Disable sampling
+        )
 
-    # target_languages = open("codes.txt").read().split()
-    target_languages = [
-        'zh', # chinese
-        # 'hi', # hindu
-        'es', # spanish
-        'ar', # arabic
-        # 'ms', # malay
-        'ru', # russian
-        # 'bn', # bengali
-        # 'pt', # portugese
-        'fr', # french
-
-        'sv', # swedish
-        # 'it', # italian
-        # 'ga', # irish
-    ]
-
-    results = []
-    for i,tl in enumerate(target_languages):
-        # logger.info(f"Finished transation {i}/{len(target_languages)}")
-        print(f"Finished transation {i}/{len(target_languages)}",end="\r")
-        link = f"https://translate.google.com.lb/?hl=en&tab=wT&sl=en&tl={tl}&text={phrase}&op=translate"
-        wd.get(link)
-        time.sleep(2)
-        result = wd.find_element_by_xpath("/html/body/c-wiz/div/div[2]/c-wiz/div[2]/c-wiz/div[1]/div[2]/div[2]/c-wiz[2]/div[5]/div/div[1]/span[1]/span/span").text
-        results.append(result)
-    
-    return results
+        translations[language] = tokenizer.batch_decode(output_sequences, skip_special_tokens=True)[0]
+    return translations
 
 # phrase = "I love to play football"
 # k = 5

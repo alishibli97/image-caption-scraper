@@ -31,12 +31,13 @@ def read_base64(url, engine, query, i):
     logger.info(f"Saved image {i}")
 
 class parse_args():
-    def __init__(self,engine,num_images,query,out_dir,headless,driver,expand,k):
+    def __init__(self,engine,num_images,query,out_dir,headless,driver,expand,translate,k):
         self.engine = engine
         self.num_images = num_images
-        self.query = query
+        self.queries = {"English": query}
         self.out_dir = out_dir
         self.headless = headless
         self.driver = driver
         self.expand = expand
         self.k = k
+        self.translate = translate
