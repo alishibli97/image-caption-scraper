@@ -1,7 +1,8 @@
 # image-caption-scraper
 
-![alt text](https://github.com/alishibli97/image-caption-scraper/blob/main/new_logo.jpg)
+[![Downloads](https://static.pepy.tech/badge/image-caption-scraper)](https://pepy.tech/project/image-caption-scraper)
 
+![alt text](https://github.com/alishibli97/image-caption-scraper/blob/main/new_logo.jpg)
 
 ## About
 
