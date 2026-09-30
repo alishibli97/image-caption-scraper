@@ -1,7 +1,73 @@
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools>=77",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "image-caption-scraper"
+version = "0.1.0"
+description = "Download images and their captions from image search engines."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Ali Shibli", email = "alishibli97@hotmail.com" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+dependencies = [
+    "loguru>=0.7,<1",
+    "Pillow>=10.1,<13",
+    "requests>=2.31,<3",
+    "selenium>=4.15,<5",
+    "typing-extensions>=4.4,<5",
+]
+
+[project.optional-dependencies]
+expand = ["nltk>=3.9,<4"]
+translate = [
+    "sentencepiece>=0.2,<1",
+    "torch>=2.2",
+    "transformers>=4.38,<6",
+]
+all = [
+    "nltk>=3.9,<4",
+    "sentencepiece>=0.2,<1",
+    "torch>=2.2",
+    "transformers>=4.38,<6",
+]
+test = [
+    "build>=1.2,<2",
+    "pytest>=8,<10",
+    "ruff>=0.13,<1",
+    "twine>=6,<7",
+]
+
+[project.urls]
+Homepage = "https://github.com/alishibli97/image-caption-scraper"
+Issues = "https://github.com/alishibli97/image-caption-scraper/issues"
+Source = "https://github.com/alishibli97/image-caption-scraper"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+image_caption_scraper = ["*.json", "*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100

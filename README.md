@@ -1,93 +1,123 @@
 # image-caption-scraper
 
+[![CI](https://github.com/alishibli97/image-caption-scraper/actions/workflows/ci.yml/badge.svg)](https://github.com/alishibli97/image-caption-scraper/actions/workflows/ci.yml)
 [![Downloads](https://static.pepy.tech/badge/image-caption-scraper)](https://pepy.tech/project/image-caption-scraper)
 
-![alt text](https://github.com/alishibli97/image-caption-scraper/blob/main/new_logo.jpg)
+![image-caption-scraper logo](new_logo.jpg)
 
-## About
+Download image-search results together with captions and JSON metadata. The
+package currently supports Google Images, Yahoo Images, and Flickr through
+Selenium.
 
-This package allows downloading images and their corresponding captions from web search engines like Google Images, Yahoo Image, Flickr, and more to come.
-
-The model is particularly targetting researchers for building their own datasets of their own concepts, and can thus train machine learning models for computer vision, natural language processing, and the intersection of both (image captioning, visual relationship detection).
-
-The pipeline is completely based on Selenium web driver.
-
-
-
-<!--
-### Table of Contents
-**[Installation](#Installation)**<br>
-**[Requirements](#Requirements)**<br>
-**[Usage](#Usage)**<br>
-**[Contact](#Contact)**<br>
-**[TODO](#TODO)**<br> 
--->
-
-<details open="open">
-  <summary>Table of Contents</summary>
-  <ol>
-    <li><a href="#Installation">Installation</a></li>
-    <li><a href="#Requirements">Requirements</a></li>
-    <li>
-      <a href="#Usage">Usage</a>
-      <ul>
-        <li><a href="#Options">Options</a></li>
-      </ul>
-    </li>
-    <li><a href="#License">License</a></li>
-    <li><a href="#Contact">Contact</a></li>
-    <li><a href="#TODO">TODO</a></li>
-  </ol>
-</details>
+> Search-engine page structure changes regularly. Treat individual engines as
+> experimental and please report a reproducible issue when an engine changes.
 
 ## Installation
-`pip install image-caption-scraper`
 
-## Requirements
-Python 3.11 or later with all [requirements.txt](https://github.com/alishibli97/image-caption-scraper/blob/main/requirements.txt) dependencies installed. To install run:
+image-caption-scraper requires Python 3.10 or later and a Chrome/Chromium
+installation.
 
-`pip install -r requirements.txt`
+```bash
+python -m pip install image-caption-scraper
+```
 
-Also, make sure to download chrome-driver from https://chromedriver.chromium.org/ and either add it to the system variables path, or type down the full path to the .exe file in the options below.
+Recent Selenium versions use Selenium Manager to locate or download a matching
+driver automatically. An explicit ChromeDriver path can still be provided when
+automatic management is unavailable.
+
+Optional query features are installed separately:
+
+```bash
+# WordNet query expansion
+python -m pip install 'image-caption-scraper[expand]'
+
+# T5-based translation (downloads a model on first use)
+python -m pip install 'image-caption-scraper[translate]'
+```
+
+WordNet expansion also needs the corresponding NLTK data once:
+
+```python
+import nltk
+
+nltk.download("averaged_perceptron_tagger_eng")
+nltk.download("punkt_tab")
+nltk.download("wordnet")
+```
 
 ## Usage
-```
-from image_caption_scraper import Image_Caption_Scraper
 
-scraper = Image_Caption_Scraper(
-                engine="all", # or "google", "yahoo", "flickr"
-                num_images=100,
-                query="dog chases cat",
-                out_dir="images",
-                headless=True,
-                driver="chromedriver",
-                expand=False,
-                k=3
-            )
+```python
+from image_caption_scraper import ImageCaptionScraper
 
-scraper.scrape(save_images=True)
+scraper = ImageCaptionScraper(
+    engine="all",  # google, yahoo, flickr, or all
+    num_images=100,
+    query="dog chases cat",
+    out_dir="images",
+    headless=True,
+)
+
+results = scraper.scrape(save_images=True)
 ```
-### Options
-| Argument        | Description           | Options  |
-| ------------- |:-------------:| -----:|
-| engine      | Search engine to scrape images from. By default it searches through all the available engines (currently supports Google, Flickr, Yahoo). | "all","google","flickr","yahoo" |
-| num_images      | Number of images targetted by the user      |  Any number (int) > 0 |
-| query | The text query to search for      | Any text query |
-| out_dir | Output directly to save the images and captions      |  Any text string |
-| headless | Argument to hide the browser while crawling the web pages or show it. True will hide, False will open it  | 'True' or 'False' |
-| expand | Argument to expand the input query. Expansions supports synonyms from wordnet at the moment. Translations are coming soon.   | 'True' or 'False' |
-| driver | The web driver to navigate the web pages. Download the driver from https://chromedriver.chromium.org/ | Default='chromedriver' (configured in System Path). Otherwise just type the path to the .exe file |
-| k | If expand==True, k determines how many synonyms to fetch from wordnet for each word in the query. It is assumed that words are separated by spaces. The model fetches the closest k synonyms for each word by path_similarity in the wordnet graph.   | 'True' or 'False' |
-| save_images | If True the model will save the images+captions in the out_dir folder. Otherwise it will only save the meta-data (with urls) without the images. | 'True' or 'False' |
+
+`scrape()` returns the collected metadata and closes Chrome by default. To keep
+the browser available for another operation, pass `close_driver=False` and call
+`scraper.close()` afterward. The previous `Image_Caption_Scraper` class name is
+still available as a compatibility alias.
+
+To save URLs and metadata without downloading the images:
+
+```python
+results = scraper.scrape(save_images=False)
+```
+
+Results are written under:
+
+```text
+<out_dir>/<engine>/<query>/<query>.json
+```
+
+Each JSON entry contains the query, image URL, caption, timestamp, source, and
+optional public IP. Public-IP collection is disabled by default; enable it only
+when it is genuinely needed with `collect_public_ip=True`.
+
+## Options
+
+| Argument | Description | Default |
+| --- | --- | --- |
+| `engine` | `google`, `yahoo`, `flickr`, or `all` | `all` |
+| `num_images` | Maximum number of results | `100` |
+| `query` | Image-search query | `dog chases cat` |
+| `out_dir` | Output directory | `images` |
+| `headless` | Run Chrome without a visible window | `True` |
+| `driver` | Optional path to ChromeDriver | Selenium Manager |
+| `expand` | Generate WordNet query variations | `False` |
+| `translate` | Add French, German, and Romanian T5 translations | `False` |
+| `k` | Synonyms retained per query word during expansion | `3` |
+| `collect_public_ip` | Include the machine's public IP in metadata | `False` |
+
+## Development
+
+```bash
+git clone https://github.com/alishibli97/image-caption-scraper.git
+cd image-caption-scraper
+python -m pip install -e '.[test]'
+pytest
+```
+
+The automated tests do not contact search engines. Live scraping should be
+tested with a small result count because websites can present regional consent
+pages, rate limits, or CAPTCHA challenges. Known automated-traffic challenges
+and HTTP error pages raise `SearchEngineAccessError` instead of silently
+returning no results.
+
+## Responsible use
+
+Review each site's terms and robots guidance, respect rate limits, and verify
+that you have the necessary rights to download and use the images and captions.
+This package does not grant rights to third-party content.
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## Contact
-Email: alishibli97@hotmail.com
-
-## TODO
-1. Verify large dataset collections (quality and time wise)
-2. Implement parallel execution for faster data collection
-3. Expand queries using more methods like transations and other.
+Distributed under the MIT License. See [LICENSE](LICENSE).
