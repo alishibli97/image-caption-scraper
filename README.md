@@ -82,6 +82,11 @@ Each JSON entry contains the query, image URL, caption, timestamp, source, and
 optional public IP. Public-IP collection is disabled by default; enable it only
 when it is genuinely needed with `collect_public_ip=True`.
 
+Google and Yahoo result thumbnails are used only to open or locate the original
+result URL. Downloads smaller than the configured minimum dimensions are
+discarded. Flickr results are restricted to Flickr's photo CDN, excluding site
+logos and advertising assets.
+
 ## Options
 
 | Argument | Description | Default |
@@ -96,6 +101,8 @@ when it is genuinely needed with `collect_public_ip=True`.
 | `translate` | Add French, German, and Romanian T5 translations | `False` |
 | `k` | Synonyms retained per query word during expansion | `3` |
 | `collect_public_ip` | Include the machine's public IP in metadata | `False` |
+| `min_width` | Minimum downloaded image width in pixels | `128` |
+| `min_height` | Minimum downloaded image height in pixels | `128` |
 
 ## Development
 

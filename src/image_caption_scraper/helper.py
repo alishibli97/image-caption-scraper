@@ -26,6 +26,8 @@ class ScraperConfig:
     expand: bool = False
     translate: bool = False
     k: int = 3
+    min_width: int = 128
+    min_height: int = 128
     queries: dict[str, str] = field(init=False)
 
     def __post_init__(self) -> None:
@@ -40,6 +42,10 @@ class ScraperConfig:
             raise ValueError("query must be a non-empty string")
         if not isinstance(self.k, int) or isinstance(self.k, bool) or self.k <= 0:
             raise ValueError("k must be a positive integer")
+        if not isinstance(self.min_width, int) or self.min_width <= 0:
+            raise ValueError("min_width must be a positive integer")
+        if not isinstance(self.min_height, int) or self.min_height <= 0:
+            raise ValueError("min_height must be a positive integer")
 
         self.query = self.query.strip()
         self.out_dir = Path(self.out_dir).expanduser()
@@ -85,6 +91,8 @@ def save_image(
     session: requests.Session | None = None,
     timeout: tuple[int, int] = DEFAULT_HTTP_TIMEOUT,
     max_bytes: int = DEFAULT_MAX_IMAGE_BYTES,
+    min_width: int = 1,
+    min_height: int = 1,
     request_headers: Mapping[str, str] | None = None,
 ) -> Path:
     """Download or decode an image and save it as RGB JPEG."""
@@ -108,6 +116,11 @@ def save_image(
     target.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(io.BytesIO(image_bytes)) as image:
         image.load()
+        if image.width < min_width or image.height < min_height:
+            raise ValueError(
+                f"image is too small ({image.width}x{image.height}); "
+                f"minimum is {min_width}x{min_height}"
+            )
         image.convert("RGB").save(target, "JPEG", quality=95)
     return target
 

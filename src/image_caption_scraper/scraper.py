@@ -6,8 +6,9 @@ import json
 import re
 import uuid
 from datetime import datetime
+from html import unescape
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 import requests
 from loguru import logger
@@ -29,8 +30,9 @@ from .helper import ScraperConfig, save_image
 
 ENGINE_NAMES = ("google", "yahoo", "flickr")
 GOOGLE_IMAGE_SELECTOR = "img.YQ4gaf, img.Q4LuWd"
+GOOGLE_FULL_IMAGE_SELECTOR = "img.sFlh5c.iPVvYb, img.n3VNCb"
 YAHOO_IMAGE_SELECTOR = "#sres li img, ul#sres img"
-FLICKR_ITEM_SELECTOR = ".photo-list-photo-view, [style*='background-image'], main img"
+FLICKR_ITEM_SELECTOR = ".photo-list-photo-view img"
 
 
 class SearchEngineAccessError(RuntimeError):
@@ -52,6 +54,8 @@ class ImageCaptionScraper:
         translate: bool = False,
         k: int = 3,
         collect_public_ip: bool = False,
+        min_width: int = 128,
+        min_height: int = 128,
     ) -> None:
         logger.info("Initializing scraper")
         self.cfg = ScraperConfig(
@@ -64,6 +68,8 @@ class ImageCaptionScraper:
             expand,
             translate,
             k,
+            min_width,
+            min_height,
         )
         self.public_ip = self.get_public_ip_address() if collect_public_ip else None
         self._prepare_queries()
@@ -210,9 +216,155 @@ class ImageCaptionScraper:
             value = element.get_attribute(attribute)
             if value and value.startswith(("http://", "https://")):
                 return value
+            if value and value.startswith("//"):
+                return f"https:{value}"
             if value and value.startswith("data:"):
                 data_url = value
         return data_url
+
+    def _image_dimensions(self, element: object) -> tuple[int, int]:
+        assert self.wd is not None
+        dimensions = self.wd.execute_script(
+            "return [arguments[0].naturalWidth || 0, arguments[0].naturalHeight || 0];",
+            element,
+        )
+        return int(dimensions[0]), int(dimensions[1])
+
+    def _best_image_url(
+        self,
+        elements: list[object],
+        *,
+        excluded_urls: set[str] | None = None,
+        rejected_hosts: tuple[str, ...] = (),
+    ) -> str | None:
+        excluded_urls = excluded_urls or set()
+        candidates: list[tuple[int, str]] = []
+        for element in elements:
+            try:
+                url = self._image_source(element)
+                if not url or url in excluded_urls or not url.startswith(("http://", "https://")):
+                    continue
+                host = (urlparse(url).hostname or "").lower()
+                if any(
+                    host == rejected or host.endswith(f".{rejected}") for rejected in rejected_hosts
+                ):
+                    continue
+                width, height = self._image_dimensions(element)
+                if width < self.cfg.min_width or height < self.cfg.min_height:
+                    continue
+            except (StaleElementReferenceException, TypeError, ValueError):
+                continue
+            candidates.append((width * height, url))
+        return max(candidates, default=(0, None))[1]
+
+    def _google_full_image_url(self, thumbnail: object) -> str | None:
+        assert self.wd is not None
+        thumbnail_url = self._image_source(thumbnail)
+        try:
+            self.wd.execute_script("arguments[0].scrollIntoView({block: 'center'});", thumbnail)
+            self.wd.execute_script("arguments[0].click();", thumbnail)
+        except (StaleElementReferenceException, WebDriverException):
+            return None
+
+        def full_image_url(driver: webdriver.Chrome) -> str | None:
+            candidates = driver.find_elements(By.CSS_SELECTOR, GOOGLE_FULL_IMAGE_SELECTOR)
+            return self._best_image_url(
+                candidates,
+                excluded_urls={thumbnail_url} if thumbnail_url else set(),
+                rejected_hosts=("gstatic.com",),
+            )
+
+        try:
+            return WebDriverWait(self.wd, 3).until(full_image_url)
+        except TimeoutException:
+            return None
+
+    @staticmethod
+    def _url_from_yahoo_metadata(values: list[str]) -> str | None:
+        preferred_keys = {"iurl", "imgurl", "imageurl", "mediaurl", "image_url"}
+
+        def valid_url(value: object) -> str | None:
+            if not isinstance(value, str):
+                return None
+            candidate = unquote(unescape(value)).replace("\\/", "/")
+            return candidate if candidate.startswith(("http://", "https://")) else None
+
+        def walk(value: object) -> str | None:
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    if key.lower() in preferred_keys and (candidate := valid_url(item)):
+                        return candidate
+                for item in value.values():
+                    if candidate := walk(item):
+                        return candidate
+            elif isinstance(value, list):
+                for item in value:
+                    if candidate := walk(item):
+                        return candidate
+            return None
+
+        for raw_value in values:
+            parsed = urlparse(unescape(raw_value))
+            for key, items in parse_qs(parsed.query).items():
+                if key.lower() in preferred_keys:
+                    for item in items:
+                        if candidate := valid_url(item):
+                            return candidate
+            try:
+                structured = json.loads(raw_value)
+            except (json.JSONDecodeError, TypeError):
+                continue
+            if candidate := walk(structured):
+                return candidate
+        return None
+
+    def _yahoo_full_image_url(self, thumbnail: object) -> str | None:
+        assert self.wd is not None
+        values = self.wd.execute_script(
+            """
+            const image = arguments[0];
+            const item = image.closest('li');
+            const link = image.closest('a') || (item && item.querySelector('a'));
+            const nodes = [item, link].filter(Boolean);
+            return nodes.flatMap(node => Array.from(node.attributes, attr => attr.value));
+            """,
+            thumbnail,
+        )
+        if original_url := self._url_from_yahoo_metadata(values or []):
+            return original_url
+
+        thumbnail_url = self._image_source(thumbnail)
+        try:
+            self.wd.execute_script("arguments[0].click();", thumbnail)
+        except (StaleElementReferenceException, WebDriverException):
+            return None
+
+        def full_image_url(driver: webdriver.Chrome) -> str | None:
+            return self._best_image_url(
+                driver.find_elements(By.TAG_NAME, "img"),
+                excluded_urls={thumbnail_url} if thumbnail_url else set(),
+                rejected_hosts=("yimg.com",),
+            )
+
+        try:
+            return WebDriverWait(self.wd, 3).until(full_image_url)
+        except TimeoutException:
+            return None
+
+    @staticmethod
+    def _flickr_large_image_url(url: str) -> str | None:
+        host = (urlparse(url).hostname or "").lower()
+        is_photo_host = host == "live.staticflickr.com" or bool(
+            re.fullmatch(r"farm\d+\.staticflickr\.com", host)
+        )
+        if not is_photo_host:
+            return None
+        return re.sub(
+            r"_(?:s|q|t|m|n|w|z|c)\.(jpe?g|png|gif)$",
+            r"_b.\1",
+            url,
+            flags=re.IGNORECASE,
+        )
 
     def _result(
         self,
@@ -307,12 +459,12 @@ class ImageCaptionScraper:
                 before = len(elements)
                 for element in elements:
                     try:
-                        url = self._image_source(element)
-                        if not url or url in seen_urls:
-                            continue
                         caption = (
                             element.get_attribute("alt") or element.get_attribute("title") or query
                         )
+                        url = self._google_full_image_url(element)
+                        if not url or url in seen_urls:
+                            continue
                     except StaleElementReferenceException:
                         continue
                     seen_urls.add(url)
@@ -360,12 +512,12 @@ class ImageCaptionScraper:
                 before = len(elements)
                 for element in elements:
                     try:
-                        url = self._image_source(element)
-                        if not url or url in seen_urls:
-                            continue
                         caption = (
                             element.get_attribute("alt") or element.get_attribute("title") or query
                         )
+                        url = self._yahoo_full_image_url(element)
+                        if not url or url in seen_urls:
+                            continue
                     except StaleElementReferenceException:
                         continue
                     seen_urls.add(url)
@@ -420,13 +572,8 @@ class ImageCaptionScraper:
                 before = len(elements)
                 for element in elements:
                     try:
-                        url = self._image_source(element)
-                        if not url:
-                            style = element.get_attribute("style") or ""
-                            match = re.search(r"url\([\"']?(.*?)[\"']?\)", style)
-                            url = match.group(1) if match else None
-                            if url and url.startswith("//"):
-                                url = f"https:{url}"
+                        source_url = self._image_source(element)
+                        url = self._flickr_large_image_url(source_url) if source_url else None
                         if not url or url in seen_urls:
                             continue
                         caption = (
@@ -494,6 +641,8 @@ class ImageCaptionScraper:
                         str(item["url"]),
                         target_directory / filename,
                         session=session,
+                        min_width=self.cfg.min_width,
+                        min_height=self.cfg.min_height,
                         request_headers=headers,
                     )
                 except (OSError, ValueError, requests.RequestException) as exc:
